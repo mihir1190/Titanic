@@ -1,4 +1,11 @@
-#Try  logistic regression, random forest in the 2 ways, ticket number variable, family
+# Next steps
+# familyname_size
+# logistic regression
+# rpart - decision tree
+# randomforest or train from caret with type = "DT"
+# baruta - For variable reduction
+# correl to decide important variables
+# Pick 5 important vairables and run the model with that. Then keep increasin.
 
 #Download packages
 install.packages("caret",dependencies = TRUE)
@@ -95,7 +102,9 @@ table(trainSet$Survived,l)
 # It has been vizualized in the next couple of lines.
 comb$Fare_bucket = cut(comb$Fare,breaks = c(-1,10,50,80,Inf),labels = c("l","m","h","u"))
 comb$Fare_bucket = as.factor(comb$Fare_bucket)
-
+prop.table(table(comb$Pclass,comb$Survived),1)
+plot(comb$Pclass,comb$Fare)
+summary(comb)
 # Exploring the fare outliers
 s1 = trainSet[trainSet$Fare >120 & trainSet$Survived ==0,]
 View(s1)
@@ -134,7 +143,7 @@ comb$title[comb$title %in% c('Mme', 'Mlle','the Countess','Lady','Ms','Sir','Don
 comb$title[comb$title %in% c('Capt','Don','Jonkheer','Rev')] ='Martry'
 comb$title[comb$title %in% c('Dr','Major')] ='Senior'
 unique(comb$title)
-
+comb$title = as.factor(comb$title)
 
 #adding a new secondary variable - family size
 comb$Family_size = comb$SibSp + comb$Parch
@@ -218,19 +227,28 @@ names(comb)
 train = comb[1:891,]
 test = comb[892:1309,]
 
+#RF
 model <- train(factor(Survived) ~ Pclass + Sex + SibSp +Age + Embarked + Parch + Cabin1 + Age_Bucket 
    + Fare + Family_size +Age_log + Has_cabin +title + Fare_bucket + Fancy_cabin, # Survived is a function of the variables we decided to include
                data = train,method = "rf",
                trControl = trainControl(method = "cv",
                                         number = 5))
+
+model2 = randomForest(train1,y = as.factor(train$Survived),mtry = 15,ntree = 1000,importance = T)
+summary(train1)
+varImpPlot(model2)
+train1 = train[,-c(1,2,4,9,11)]
+names(train)
+
 model
 test$Survived = predict(model,newdata = test)
 train$Survived = as.factor(train$Survived)
-
+# GLM
 model1 = glm(Survived~Pclass + Sex + SibSp +Age + Embarked + Parch + Cabin1 + Age_Bucket 
              + Fare + Family_size +Age_log + Has_cabin +title + Fare_bucket + Fancy_cabin, # Survived is a function of the variables we decided to include
-             data = train,family = binomial(logit))
+             data = train,family = "binomial")
 model1
+summary(model1)
 plot(model1)
 test$Survived1 = predict(model1,newdata = test,type = "response")
 test$Survived = sapply(test$Survived1,FUN = function(x) {ifelse(x>.6,1,0)})
